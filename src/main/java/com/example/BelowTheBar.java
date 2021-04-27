@@ -150,6 +150,12 @@ public class BelowTheBar extends Command {
 
 			List<long[]> suballocatedHeaps = new ArrayList<>();
 
+			// TODO: walk the heaps and measure the fragmentation:
+			// https://github.com/eclipse/omr/blob/master/port/common/omrheap.c, which uses
+			// "the first-fit method in KNUTH, D. E. The Art of Computer Programming. Vol.
+			// 1: Fundamental Algorithms. (2nd edition). Addison-Wesley, Reading, Mass.,
+			// 1973, Sect. 2.5."
+
 			long totalJ9HeapWrapperSize = 0, totalJ9HeapSize = 0;
 			while (heapWrapper.notNull()) {
 
@@ -170,13 +176,18 @@ public class BelowTheBar extends Command {
 				PointerPointer j9Heap = PointerPointer.cast(PointerPointer.cast(heapWrapper).at(1));
 				U64 j9HeapSize = U64Pointer.cast(j9Heap.getAddress() + 0x0).at(0);
 
+				// The J9HeapWrapper->heapSize is in bytes. The J9Heap->size is the number of 8
+				// byte slots, since the memory is managed in 8 byte chunks. They are both
+				// referring to the same memory
+				long j9HeapSizeCalculated = j9HeapSize.longValue() * 8;
+
 				totalJ9HeapWrapperSize += heapSize.longValue();
-				totalJ9HeapSize += j9HeapSize.longValue();
+				totalJ9HeapSize += j9HeapSizeCalculated;
 
 				if (debug)
 					out.println("J9HeapWrapper " + heapWrapper.getHexAddress() + " ; J9HeapWrapper size "
 							+ formatter.format(heapSize.longValue()) + " ; J9Heap " + j9Heap.getHexAddress()
-							+ " ; J9Heap size " + formatter.format(j9HeapSize.longValue()));
+							+ " ; J9Heap size " + formatter.format(j9HeapSizeCalculated));
 				else
 					out.println("!j9heapwrapper " + heapWrapper.getHexAddress() + " @ " + j9Heap.getHexAddress() + " - "
 							+ String.format("0x%016X", j9Heap.getAddress() + heapSize.longValue()) + " ("
